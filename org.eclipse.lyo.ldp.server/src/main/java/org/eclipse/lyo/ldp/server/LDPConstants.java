@@ -47,6 +47,7 @@ public class LDPConstants
 	public static final String CT_APPLICATION_SPARQLQUERY = "application/sparql-query";
 	public static final String CT_APPLICATION_SPARQLRESULTSXML = "application/sparql-results+xml";
 	public static final String CT_APPLICATION_SPARQLRESULTSJSON = "application/sparql-results+json";
+	public static final String CT_APPLICATION_SPARQLUPDATE = "application/sparql-update";
 	public static final String CT_TEXT_HTML = MediaType.TEXT_HTML;
 	public static final String CT_TEXT_TURTLE = "text/turtle";
 	public static final String CT_TEXT_TRIG = "text/trig";

@@ -40,6 +40,7 @@ import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.UriBuilder;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpStatus;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFLanguages;
@@ -57,6 +58,7 @@ import com.hp.hpl.jena.rdf.model.RDFNode;
 import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.rdf.model.Statement;
 import com.hp.hpl.jena.rdf.model.StmtIterator;
+import com.hp.hpl.jena.update.UpdateRequest;
 import com.hp.hpl.jena.vocabulary.DCTerms;
 
 
@@ -143,7 +145,19 @@ public class JenaLDPRDFSource extends LDPRDFSource {
 	@Override
 	public void patch(String resourceURI, InputStream stream,
 			String contentType, String user) {
-		// TODO Auto-generated method stub
+		Model before = fGraphStore.getGraph(getURI());
+		// We shouldn't have gotten this far but to be safe
+		if (before == null)
+			throw new WebApplicationException(HttpStatus.SC_NOT_FOUND);
+		String patch = null;
+		try {
+			patch = IOUtils.toString(stream);
+		} catch (IOException e) {
+			fail(Status.INTERNAL_SERVER_ERROR);
+		}
+		UpdateRequest update = com.hp.hpl.jena.update.UpdateFactory.create(patch,getURI());
+		before.setNsPrefixes(update.getPrefixMapping());
+		com.hp.hpl.jena.update.UpdateAction.execute(update,before);
 	}
 
 	@Override

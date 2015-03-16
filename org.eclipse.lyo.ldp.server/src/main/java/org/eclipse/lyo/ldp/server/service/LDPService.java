@@ -296,7 +296,22 @@ public abstract class LDPService {
 
 		return Response.status(Status.OK).build();
 	}
-	
+
+	@PATCH
+	@Consumes(LDPConstants.CT_APPLICATION_SPARQLUPDATE)
+	public Response patchRDFSource(final InputStream content) {
+		// Set the initial container representation. Should only be called once.
+		// May be invoked when query params are used, like ?_admin or ?_meta.
+		String resourceURI = getConanicalURL(fRequestUrl.getRequestUri());
+		ILDPResource ldpR = getResourceManger().get(resourceURI);
+		if (ldpR != null) {
+			ldpR.patch(resourceURI, content, stripCharset(fRequestHeaders.getMediaType().toString()), null);
+			return Response.status(Status.NO_CONTENT).build();
+		} else {
+			return Response.status(Status.NOT_FOUND).build();
+		}
+	}
+
 	private Response getResource(final String type) {	
 		String resourceURI = getConanicalURL(fRequestUrl.getRequestUri());
 		ILDPResource ldpR = getResourceManger().get(resourceURI);
