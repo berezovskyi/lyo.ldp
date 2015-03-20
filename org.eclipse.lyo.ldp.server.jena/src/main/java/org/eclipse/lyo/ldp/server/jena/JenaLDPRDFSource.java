@@ -145,19 +145,30 @@ public class JenaLDPRDFSource extends LDPRDFSource {
 	@Override
 	public void patch(String resourceURI, InputStream stream,
 			String contentType, String user) {
-		Model before = fGraphStore.getGraph(getURI());
-		// We shouldn't have gotten this far but to be safe
-		if (before == null)
-			throw new WebApplicationException(HttpStatus.SC_NOT_FOUND);
 		String patch = null;
 		try {
 			patch = IOUtils.toString(stream);
 		} catch (IOException e) {
 			fail(Status.INTERNAL_SERVER_ERROR);
 		}
-		UpdateRequest update = com.hp.hpl.jena.update.UpdateFactory.create(patch,getURI());
-		before.setNsPrefixes(update.getPrefixMapping());
-		com.hp.hpl.jena.update.UpdateAction.execute(update,before);
+		fGraphStore.writeLock();
+		Model model = fGraphStore.getGraph(getURI());
+		// We shouldn't have gotten this far but to be safe
+		if (model == null)
+			throw new WebApplicationException(HttpStatus.SC_NOT_FOUND);
+		try {
+		  UpdateRequest update = com.hp.hpl.jena.update.UpdateFactory.create(patch,getURI());
+		  model.setNsPrefixes(update.getPrefixMapping());
+		  com.hp.hpl.jena.update.UpdateAction.execute(update,model);
+          Calendar time = Calendar.getInstance();
+		  Resource subject = model.getResource(resourceURI);
+		  subject.removeAll(DCTerms.modified);
+		  subject.addLiteral(DCTerms.modified, model.createTypedLiteral(time));
+
+		  fGraphStore.commit();
+		} finally {
+			fGraphStore.end();
+		}
 	}
 
 	@Override
@@ -213,8 +224,14 @@ public class JenaLDPRDFSource extends LDPRDFSource {
 		fGraphStore.readLock();
 		try {
 			Model graph = fGraphStore.getGraph(fURI);
-			if (graph == null)
-				throw new WebApplicationException(Status.NOT_FOUND);
+			if (graph == null) {
+				if (getConfigModel() != null) {
+					// a deleted URI, fail the request.
+					throw new WebApplicationException(Response.status(Status.GONE).build());
+				} else {
+					throw new WebApplicationException(Status.NOT_FOUND);
+				}
+			}
 
 			final String eTag = getETag(graph);
 			graph = amendResponseGraph(graph, preferences);

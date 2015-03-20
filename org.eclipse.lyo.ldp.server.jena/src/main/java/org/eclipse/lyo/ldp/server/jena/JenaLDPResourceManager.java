@@ -18,6 +18,8 @@
  *******************************************************************************/
 package org.eclipse.lyo.ldp.server.jena;
 
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriBuilder;
 
 import org.eclipse.lyo.ldp.server.ILDPResource;
@@ -54,6 +56,10 @@ public class JenaLDPResourceManager implements LDPResourceManager {
 			if (graph == null) {
 				if (JenaLDPNonRdfSource.isLDPNR(resourceURI)) {
 					return new JenaLDPNonRdfSource(resourceURI, gs);
+				}
+				Model config = gs.getGraph(mintConfigURI(resourceURI));
+				if (config != null) {
+					throw new WebApplicationException(Status.GONE);
 				}
 				return null;
 			}

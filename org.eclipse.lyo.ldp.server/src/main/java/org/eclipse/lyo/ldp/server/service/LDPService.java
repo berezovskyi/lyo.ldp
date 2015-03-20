@@ -82,7 +82,21 @@ public abstract class LDPService {
 	 * @see #hasResourceTypeHeader(HttpHeaders)
 	 */
 	public static final String LINK_TYPE_RESOURCE_REGEX
-                = "<http://www\\.w3\\.org/ns/ldp#Resource\\>\\s*;\\s*rel\\s*=\\s*((\"\\s*([^\"]+\\s+)*type(\\s+[^\"]+)*\\s*\")|\\s*type)([\\s;,]+.*|\\z)";
+    = "<http://www\\.w3\\.org/ns/ldp#Resource\\>\\s*;\\s*rel\\s*=\\s*((\"\\s*([^\"]+\\s+)*type(\\s+[^\"]+)*\\s*\")|\\s*type)([\\s;,]+.*|\\z)";
+	/**
+	 * Regular expression that matches Link headers with URI
+	 * {@link LDPConstants#CLASS_NONRDFSOURCE} and linknrelation {@code "type"}. These all match:
+	 * <ul>
+	 * <li>{@code <http://www.w3.org/ns/ldp#NonRDFSource>; rel="type"}</li>
+	 * <li>{@code <http://www.w3.org/ns/ldp#NonRDFSource>; rel="type"; title="LDP NonRDFResource"}</li>
+	 * <li>{@code <http://www.w3.org/ns/ldp#NonRDFSource>;rel=type}</li>
+	 * <li>{@code <http://www.w3.org/ns/ldp#NonRDFSource>; rel="type http://example.net/relation/other"}</li>
+	 * </ul>
+	 * 
+	 * @see #hasNonRDFSourceTypeHeader(HttpHeaders)
+	 */
+	public static final String LINK_TYPE_NONRDFSOURCE_REGEX
+                = "<http://www\\.w3\\.org/ns/ldp#NonRDFSource\\>\\s*;\\s*rel\\s*=\\s*((\"\\s*([^\"]+\\s+)*type(\\s+[^\"]+)*\\s*\")|\\s*type)([\\s;,]+.*|\\z)";
 	
 	@Context HttpServletRequest fRequest;
 	@Context HttpHeaders fRequestHeaders;
@@ -192,7 +206,12 @@ public abstract class LDPService {
 	@Consumes({ LDPConstants.CT_APPLICATION_RDFXML, LDPConstants.CT_TEXT_TURTLE, LDPConstants.CT_APPLICATION_XTURTLE, LDPConstants.CT_APPLICATION_JSON, LDPConstants.CT_APPLICATION_LD_JSON })
 	public Response post(@HeaderParam(LDPConstants.HDR_SLUG) final String slug, final InputStream content) {
 		final ILDPContainer ldpC = getRequestContainer();
+
+		if (hasNonRDFSourceTypeHeader(fRequestHeaders)) {
+			return ldpC.postNonRDFSource(content, stripCharset(fRequestHeaders.getMediaType().toString()), getCurrentUser(), slug );
+		}
 		String loc = ldpC.post(content, stripCharset(fRequestHeaders.getMediaType().toString()), getCurrentUser(), slug, hasResourceTypeHeader(fRequestHeaders) );
+		
 		if (loc != null)
 			return Response.status(Status.CREATED)
 					.header(HttpHeaders.LOCATION, loc)
@@ -211,9 +230,19 @@ public abstract class LDPService {
 	 *	 Link: <http://www.w3.org/ns/ldp#Resource>; rel="type"
 	 */
 	public static boolean hasResourceTypeHeader(HttpHeaders headers) {
+		return hasLinkHeaderMatchingRegex(headers, LINK_TYPE_RESOURCE_REGEX);
+	}
+	/**
+	 * Given a set of request headers, return true if any of them are (roughly):
+	 *	 Link: <http://www.w3.org/ns/ldp#NonRDFSource>; rel="type"
+	 */
+	public static boolean hasNonRDFSourceTypeHeader(HttpHeaders headers) {
+		return hasLinkHeaderMatchingRegex(headers, LINK_TYPE_NONRDFSOURCE_REGEX);
+	}
+	private static boolean hasLinkHeaderMatchingRegex(HttpHeaders headers, String regex) {
 		List<String> linkHeaders = headers.getRequestHeader(LDPConstants.HDR_LINK);
 		for (String header : linkHeaders) {
-			if (header.matches(LINK_TYPE_RESOURCE_REGEX)) {
+			if (header.matches(regex)) {
 				return true;
 			}
 		}

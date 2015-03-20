@@ -71,7 +71,8 @@ public class JenaLDPNonRdfSource extends LDPNonRDFSource {
 
 			File file = toFile(getURI());
 			if (!file.isFile()) {
-				throw new WebApplicationException(Response.Status.NOT_FOUND);
+				Status status = (associatedModel == null) ? Response.Status.NOT_FOUND : Response.Status.GONE;
+				throw new WebApplicationException(status);
 			}
 			
 			// Check ETag header.
@@ -198,7 +199,7 @@ public class JenaLDPNonRdfSource extends LDPNonRDFSource {
 	
 			File file = toFile(getURI());
 			if (!file.isFile()) {
-				return Response.status(Response.Status.NOT_FOUND).build();
+				return Response.status(Response.Status.GONE).build();
 			}
 	
 			ResponseBuilder response = Response.ok(file);

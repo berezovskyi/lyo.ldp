@@ -200,16 +200,20 @@ public class JenaLDPContainer extends JenaLDPRDFSource implements ILDPContainer
 	 */
 	public void patch(String resourceURI, InputStream stream, String contentType, String user)
 	{
-		String baseURI = resourceURI.equals(fConfigGraphURI) ? fURI : resourceURI;
-		fGraphStore.writeLock();
-		try {
-			if (fGraphStore.getGraph(resourceURI) == null)
-				createResource(resourceURI, true, stream, contentType, user);
-			else
-				patchResource(resourceURI, baseURI, stream, contentType, user);
-			fGraphStore.commit();
-		} finally {
-			fGraphStore.end();
+		if (LDPConstants.CT_APPLICATION_SPARQLUPDATE.equals(contentType)){
+			super.patch(resourceURI, stream, contentType, user);
+		} else {
+			String baseURI = resourceURI.equals(fConfigGraphURI) ? fURI : resourceURI;
+			fGraphStore.writeLock();
+			try {
+				if (fGraphStore.getGraph(resourceURI) == null)
+					createResource(resourceURI, true, stream, contentType, user);
+				else
+					patchResource(resourceURI, baseURI, stream, contentType, user);
+				fGraphStore.commit();
+			} finally {
+				fGraphStore.end();
+			}
 		}
 	}
 
